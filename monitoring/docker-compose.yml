@@ -1,0 +1,27 @@
+version: "3.9"
+services:
+  grafana:
+    image: grafana/grafana:11.0.0
+    ports: ["3000:3000"]
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports: ["9090:9090"]
+
+  loki:
+    image: grafana/loki:3.1.0
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml
+    ports: ["3100:3100"]
+
+  promtail:
+    image: grafana/promtail:3.1.0
+    volumes:
+      - ./loki/loki-config.yml:/etc/promtail/promtail.yaml
+      - /var/log/app/:/var/log/app/
+    command: -config.file=/etc/promtail/promtail.yaml

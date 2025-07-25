@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  api:
+    image: your-registry/fastapi-enterprise-clean:latest
+    environment:
+      - LOG_CFG=/app/monitoring/logging/logging.yaml
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7

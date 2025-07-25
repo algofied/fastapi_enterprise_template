@@ -1,0 +1,7 @@
+find . -type d -name "__pycache__" -exec rm -r {} +
+
+
+rm dev.db
+alembic stamp head
+alembic upgrade head
+alembic revision --autogenerate -m "initial schema"

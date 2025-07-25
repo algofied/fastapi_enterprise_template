@@ -1,0 +1,9 @@
+from typing import Protocol, Optional, List
+from app.domain.entities.user import User, UserId
+
+class UserReader(Protocol):
+    async def get_by_id(self, user_id: UserId) -> Optional[User]: ...
+    async def list_users(self) -> List[User]: ...
+
+class UserWriter(Protocol):
+    async def save(self, user: User) -> User: ...

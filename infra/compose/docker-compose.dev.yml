@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.web
+    environment:
+      - LOG_CFG=monitoring/logging/logging.yaml
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  celery_worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.worker
+    depends_on:
+      - redis
