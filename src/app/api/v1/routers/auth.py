@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.auth import TokenResponse     # updated import
 from app.domain.services.auth_service import AuthService
 from app.infrastructure.db.dependencies import get_main_session
+from app.utils.hp_py_logger import update_request_context
 
 router = APIRouter()
 
@@ -19,6 +20,7 @@ async def login(
     """
     Authenticate via LDAP and return a JWT.
     """
+    update_request_context(user=form_data.username)
     service = AuthService(session)
     return await service.login(form_data.username, form_data.password)
 

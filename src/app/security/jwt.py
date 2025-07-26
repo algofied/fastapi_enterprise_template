@@ -9,6 +9,13 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
+def _get_signing_key() -> str:
+    # HS* algs expect a raw shared secret string/bytes, not SecretStr
+    key = settings.secret_key.get_secret_value()
+    if not key or not isinstance(key, str):
+        raise RuntimeError("SECRET_KEY is missing or invalid")
+    return key
+
 def create_token(data: dict) -> str:
     """
     Create a JWT whose expiration is calculated in the configured timezone.
@@ -21,7 +28,7 @@ def create_token(data: dict) -> str:
     to_encode["exp"] = int(expire.timestamp())
     return jwt.encode(
         to_encode,
-        settings.secret_key,
+        _get_signing_key(),
         algorithm=settings.jwt_algorithm
     )
 

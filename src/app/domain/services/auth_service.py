@@ -6,6 +6,7 @@ from app.auth.ldap_client import ldap_bind
 from app.security.jwt import create_token
 from app.infrastructure.db.repositories.user_repo import UserRepository
 from app.schemas.auth import TokenResponse
+from app.utils.hp_py_logger import update_request_context
 
 class AuthService:
     """
@@ -28,10 +29,15 @@ class AuthService:
         print(f"LDAP bind successful for user: {(username)}")
         # 2️⃣ Fetch user record (and roles) from DB
         user = await self.repo.get_by_id(username)
+        
         print(f"User fetched from DB: {user}")  # Debugging line
+
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-
+        
+        print(f":::::::::::::::::::-------User found: {user.username}----{getattr(user, "username", None)}" )
+        update_request_context(user=username)
+        
         # 3️⃣ Map Role objects → List[str]
         #    user.roles is List[Role], so extract .name
         role_names = [role.name for role in user.roles]
