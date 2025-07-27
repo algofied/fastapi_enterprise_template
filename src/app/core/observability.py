@@ -1,14 +1,33 @@
+from __future__ import annotations
 import time
-from prometheus_client import Histogram, Counter
-from fastapi import Request
+from typing import Callable
+from fastapi import Request, Response
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
-REQUEST_LATENCY = Histogram("app_request_latency_seconds", "Request latency", ["method", "path"])
-REQUEST_COUNT = Counter("app_request_total", "Request count", ["method", "path", "status"])
+REQUEST_COUNT = Counter(
+    "http_requests_total",
+    "Total HTTP requests",
+    ["method", "path", "status"],
+)
 
-async def metrics_middleware(request: Request, call_next):
+REQUEST_LATENCY = Histogram(
+    "http_request_latency_seconds",
+    "Latency of HTTP requests",
+    ["method", "path"]
+)
+
+async def metrics_middleware(request: Request, call_next: Callable):
     start = time.perf_counter()
-    response = await call_next(request)
-    latency = time.perf_counter() - start
-    REQUEST_LATENCY.labels(request.method, request.url.path).observe(latency)
-    REQUEST_COUNT.labels(request.method, request.url.path, str(response.status_code)).inc()
+    response: Response = await call_next(request)
+    elapsed = time.perf_counter() - start
+
+    # Label cardinality: avoid raw dynamic paths; you can normalize (e.g., /users/{id} -> /users/:id)
+    path = request.url.path
+    REQUEST_COUNT.labels(request.method, path, str(response.status_code)).inc()
+    REQUEST_LATENCY.labels(request.method, path).observe(elapsed)
     return response
+
+# Expose /metrics response
+def metrics_response():
+    from fastapi import Response
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)

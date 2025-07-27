@@ -25,7 +25,7 @@ def get_user_service(
     "/",
     response_model=List[UserRead],
     summary="List all users (admin only)",
-    dependencies=[Depends(require_roles(["admin"]))]
+    dependencies=[Depends(require_roles("admin"))]
 )
 async def list_users(svc: UserService = Depends(get_user_service)):
     """
@@ -65,7 +65,7 @@ async def get_user(
     "/",
     response_model=UserRead,
     summary="Create a new user (admin only)",
-    dependencies=[Depends(require_roles(["admin"]))]
+    dependencies=[Depends(require_roles("admin"))]
 )
 async def create_user(
     payload: UserCreate,

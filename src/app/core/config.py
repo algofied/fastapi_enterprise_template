@@ -14,8 +14,13 @@ class Settings(PydanticBaseSettings):
     debug: bool = Field(default=False, env="DEBUG")
     service_name: str = Field(default="fastapi-enterprise-template", env="SERVICE_NAME")
 
+    # API / App
+    project_name: str = Field(default="fastapi-enterprise-clean", env="PROJECT_NAME")
+    api_version_prefix: str = Field(default="/api/v1", env="API_VERSION_PREFIX")
+    timezone: str = Field(default="Asia/Kolkata", env="TIMEZONE")
+
     # Security / JWT
-    secret_key: SecretStr = Field(..., env="SECRET_KEY")
+    secret_key: SecretStr = Field(..., env="JWT_SECRET_KEY")
     token_expiry_minutes: int = Field(default=60, env="TOKEN_EXPIRY_MINUTES")
     jwt_algorithm: str = Field(default="HS256", env="JWT_ALGORITHM")
 
@@ -44,6 +49,9 @@ class Settings(PydanticBaseSettings):
     log_backups: int = Field(default=10, env="LOG_BACKUPS")
     log_wire_sqlalchemy: bool = Field(default=False, env="LOG_WIRE_SQLALCHEMY")
     log_sqlalchemy_level: str = Field(default="WARNING", env="LOG_SQLALCHEMY_LEVEL")
+    log_db_enable: bool = Field(default=False, env="LOG_DB_ENABLE")
+    log_db_url: Optional[str] = Field(default=None, env="LOG_DB_URL")
+    log_db_table: str = Field(default="app_logs", env="LOG_DB_TABLE")
 
     # Loki / DB / MinIO log sinks
     loki_enable: bool = Field(default=False, env="LOKI_ENABLE")
@@ -51,10 +59,8 @@ class Settings(PydanticBaseSettings):
     loki_labels: str = Field(default="job=lims", env="LOKI_LABELS")
     loki_timeout_s: int = Field(default=3, env="LOKI_TIMEOUT_S")
 
-    log_db_enable: bool = Field(default=False, env="LOG_DB_ENABLE")
-    log_db_url: Optional[str] = Field(default=None, env="LOG_DB_URL")
-    log_db_table: str = Field(default="app_logs", env="LOG_DB_TABLE")
-
+    
+    # MINIO (object storage)
     minio_enable: bool = Field(default=False, env="MINIO_ENABLE")
     minio_endpoint: str = Field(default="minio:9000", env="MINIO_ENDPOINT")
     minio_secure: bool = Field(default=False, env="MINIO_SECURE")
@@ -64,16 +70,46 @@ class Settings(PydanticBaseSettings):
     minio_flush_lines: int = Field(default=100, env="MINIO_FLUSH_LINES")
     minio_flush_secs: int = Field(default=5, env="MINIO_FLUSH_SECS")
 
-    # API / App
-    project_name: str = Field(default="fastapi-enterprise-clean", env="PROJECT_NAME")
-    api_version_prefix: str = Field(default="/api/v1", env="API_VERSION_PREFIX")
-    timezone: str = Field(default="Asia/Kolkata", env="TIMEZONE")
+    # ---- Rate limit (login) ----
+    rate_limit_enable: bool = Field(default=False, env="RATE_LIMIT_ENABLE")
+    rate_limit_login_rule: str = Field(default="5/minute", env="RATE_LIMIT_LOGIN_RULE")
+    rate_limit_storage_url: Optional[str] = Field(default=None, env="RATE_LIMIT_STORAGE_URL")
+
+    # ---- Metrics protection ----
+    metrics_enabled: bool = Field(default=True, env="METRICS_ENABLED")
+    metrics_path: str = Field(default="/metrics", env="METRICS_PATH")
+    # Protect metrics: "open" | "ip_allow" | "role"
+    metrics_protect_mode: str = Field(default="ip_allow", env="METRICS_PROTECT_MODE")
+    # metrics_allow_ips: List[str] = Field(default_factory=lambda: ["127.0.0.1"], env="METRICS_ALLOW_IPS")
+    metrics_allow_ips_raw: str = Field(
+        default="127.0.0.1",
+        env="METRICS_ALLOW_IPS",
+        description="CSV of CIDRs or IPs (e.g. '10.0.0.0/8,192.168.0.0/16,127.0.0.1')",
+    )
+
+                                   
 
     # Pydantic model config (no .env here)
     model_config = SettingsConfigDict(
         case_sensitive=False,
         extra="ignore",
     )
+
+    # ---- Derived properties ----    
+    @property
+    def metrics_allow_ips(self) -> List[str]:
+        # human-friendly; good for logging/UI
+        return [p.strip() for p in self.metrics_allow_ips_raw.split(",") if p.strip()]
+
+
+    # ---- Validators ----
+    @field_validator("metrics_protect_mode")
+    @classmethod
+    def _valid_metrics_protect_mode(cls, v: str) -> str:
+        v = v.lower().strip()
+        if v not in {"open","ip_allow","role"}:
+            raise ValueError('METRICS_PROTECT_MODE must be one of:"open" | "ip_allow" | "role"')
+        return v
 
     @field_validator("log_level")
     @classmethod
@@ -134,6 +170,7 @@ class DevSettings(Settings):
 def _choose_settings_class() -> type[Settings]:
     import os
     env = os.getenv("ENVIRONMENT", "prod").lower()
+    print(f"Using settings for environment: {env}")
     return DevSettings if env in {"dev", "local"} else Settings
 
 

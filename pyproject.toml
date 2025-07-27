@@ -27,6 +27,7 @@ PyYAML = "^6.0.0"
 aiosqlite = "^0.21.0"
 greenlet = "^3.2.3"
 python-jose = "^3.5.0"
+slowapi = "^0.1.9"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.0"
